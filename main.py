@@ -1,8 +1,6 @@
 
 # coding: utf-8
 
-# In[8]:
-
 import csv
 from pprint import pprint
 delimiter = "\t"
@@ -68,9 +66,6 @@ def process(row):
     #everything, we have to check each one agaisnt the update dict
         if row[id_field] in updatedict:
             row["STOCKONHAND"]=str(countsdict[row[id_field]] )
-
-
-# In[9]:
 
 def main():
     inv = Inventory("inventory04-19-17")
