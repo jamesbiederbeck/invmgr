@@ -129,7 +129,8 @@ def main():
     print()# vertical space
     print("Here's the output")
     pprint(output)
-
+    
+    #<-------Down here, output is WRITTEN---------------->
     print("writing CSV file...")
     with open("updated-inventory",'w') as f:
         fieldnames = ["PARTNUMBER", 'ALTPARTNUMBER','STOCKONHAND']
@@ -138,8 +139,5 @@ def main():
         for row in output:
             writer.writerow(row)
         print("Success")
-        print("Items not found:")
 if __name__ == "__main__":
     main()
-    
-
