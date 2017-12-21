@@ -1,4 +1,3 @@
-
 # coding: utf-8
 
 import csv
@@ -31,7 +30,7 @@ class Inventory():
         print("none found")
         return None
 
-def getCounts(filepath = ""):
+def getcounts(filepath = ""):
     """This will read a list of barcodes, and flatten to a list of
         all the barcodes and how many times each one is in the list."""
     while not filepath: #ensure a filepath gets specified
@@ -61,6 +60,49 @@ def getCounts(filepath = ""):
 
     return countsdict
 
+def listupdateditems(inventory1, inventory2, field = ""):
+    """Compare 2 inventories, return a list of partnumbers which have been updated.
+    Optionally, this function can look at only one field for updates, eg "STOCKONHAND"
+    Returns qualifying items from item2
+    """
+    if len(field):
+        assert field in inventory1.reader.fieldnames#Why compare non existent fields?
+        assert field in inventory2.reader.fieldnames
+    differentitems = []
+    for item1 in inventory1.reader:
+        item2 = inventory2.findRecord(item1["PARTNUMBER"]) #find an equivalent record
+        assert item2 != None
+        if len(field):
+            if item1[field] != item2[field]:
+                differentitems +=item2
+        else:
+            for fieldname in inventory1.reader.fieldnames:
+                if item1[fieldname] != item2[fieldname]:
+                    differentitems += item2
+                    break
+    print("Found,",differentitems,"different items")
+    return differentitems
+
+def getexclusionsfromfile(filepath = ""):
+    """This will read a list of partnumbers from file"""
+    while not filepath: #ensure a filepath gets specified
+        print("This script accepts a list of part numbers to not touch")
+        filepath = input("Enter the path to the file you would like to parse, or 'skip'")
+        if filepath == 'skip':
+            return ""
+        
+    with open(filepath) as f:#open the file
+        data = f.read().split("\n")#chop the string into a list of lines
+    return data
+
+def zeroallitems(inventory, countsdict, exclusions):
+    """This works by 
+    """
+    for row in inventory.reader:
+        if row["PARTNUMBER"] not in exclusions:
+            if row["ALTPARTNUMBER"] not in exclusions:
+                countsdict[row["PARTNUMBER"]] = 0
+
 def process(row):
     #because paladin associates two or more partnumbers with
     #everything, we have to check each one agaisnt the update dict
@@ -68,8 +110,14 @@ def process(row):
             row["STOCKONHAND"]=str(countsdict[row[id_field]] )
 
 def main():
-    inv = Inventory("inventory04-19-17")
-    countsdict = getCounts("barcodefile.txt")
+    print("Welcome to new and improved inventory manager!")
+    inv = Inventory("test-eoy2017preupdate.tsv")
+    inv2 = Inventory("test-eoy2017postscan.tsv")
+    countsdict = getcounts("barcodefile.txt")
+    exclusions = listupdateditems(inv,inv2)
+    #add entries to counts dict to zero out items, by modifying the list
+    #in place
+    zeroallitems(inv, countsdict, (part['PARTNUMBER'] for part in exclusions))
     items ={}# this is a dict of alt partnumbers as a secondary lookup table
     output = []#This will eventually be a list of dicts; primary key:partnumber
     i = 0
@@ -91,7 +139,7 @@ def main():
     #print(items)
     itemsnotfound = []
     for key,value in countsdict.items():
-        
+        count = value#stock on hand        
 #         Assign the partnumber and altpartnumber fields
         if key in items.keys():
             print("Partnumber found")
@@ -116,8 +164,6 @@ def main():
             print("Item not found for partnumber ",key)
             itemsnotfound.append(key)
             continue
-
-        count = value#Got assigned at the top of this for loop
 
         row = {
             "PARTNUMBER":partnumber,
