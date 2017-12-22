@@ -10,31 +10,27 @@ class Inventory():
     def __init__(self,file):
         self.f = open(file)
         print("Loading file",file)
-        reader = csv.DictReader(self.f,delimiter=delimiter)#probably "," or "\t"
+        self.reader = csv.DictReader(self.f,delimiter=delimiter)#probably "," or "\t"
         print("Found headers in inventory file:")
-        print(reader.fieldnames)
-        self.reader=reader
-        length = 0
-        for line in self.reader:
-            length += 1
-        self.length=length
-        print("found", self.length, "items")
+        print(self.reader.fieldnames)
+        self.items = list(self.reader)
+        print("found", len(self.items), "items")
+        #self.close()#still trying to decide if necessary
     def __len__(self):
-        return self.length
+        return len(self.items)
     def getDialect(self):
         self.sniffer = csv.sniffer()
-    def close():
+    def close(self):
         self.f.close()
     def findRecord(self, partnumber):
         """takes a part number, returns the inventory entry for that item"""  
-        for row in self.reader:
+        for row in self.items:
             if row["PARTNUMBER"]==partnumber:
                 return row
             if row["ALTPARTNUMBER"]==partnumber:
                 return row
         #assume that if execution reached this point, nothing was found.
-        #print("Could not find record,",partnumber)
-        print("none found")
+        print("Could not find record,",partnumber)
         return None
 
 def getcounts(filepath = ""):
@@ -52,11 +48,8 @@ def getcounts(filepath = ""):
     countsdict ={}
 
     #This goes through the list of part numbers, and makes sure each has an
-    #entry in the dictionary. Inefficient, but not wasteful enough to matter
-    #at this scale.
-    for line in data:
-        #here I get only the first column, since I added timestamps to counts list
-        #countsdict[line.split("\t")[0]] = 0 
+    #entry in the dictionary.
+    for line in set(data):
         countsdict[line] = 0 
 
     #Increment count for each instance of the sku in the list of part numbers
@@ -79,14 +72,15 @@ def listupdateditems(inventory1, inventory2, field = ""):
         assert field in inventory2.reader.fieldnames
     differentitems = []
     similaritemcounter = 0
-    for item1 in inventory1.reader:
+    for item1 in inventory1.items:
         item2 = inventory2.findRecord(item1["PARTNUMBER"]) #find an equivalent record
         assert item2 != None
         if len(field):#if a field to compare is specified
             if item1[field] != item2[field]:#compare the fields for the 2 items
                 print(item1[field],item2[field])
-                differentitems +=item2
+                differentitems +=item2["PARTNUMBER"]
             else:
+                #print("similar item,", item1["PARTNUMBER"],item1["DESCRIPTION1"])
                 similaritemcounter +=1
         else:
             for fieldname in inventory1.reader.fieldnames:
@@ -98,8 +92,8 @@ def listupdateditems(inventory1, inventory2, field = ""):
     # print("Found,",differentitems,"different items")
     print("Different items",len(differentitems))
     print("Similar items", similaritemcounter)
-    print("That's out of ",len(inventory2),"items in inventory 2")
-    return [part['PARTNUMBER'] for part in differentitems]
+    print("That's out of ",len(inventory2.items),"items in inventory 2")
+    return differentitems
 
 def getexclusionsfromfile(filepath = ""):
     """This will read a list of partnumbers from file"""
@@ -113,11 +107,11 @@ def getexclusionsfromfile(filepath = ""):
         data = f.read().split("\n")#chop the string into a list of lines
     return data
 
-def zeroallitems(inventory, countsdict, exclusions=[]):
-    """Iterate through inventory, modify countsdict in place, setting items to 0
+def zerostockforallitems(inventory, countsdict, exclusions=[]):
+    """Iterate through inventory, fill countsdict, setting items to 0
     Takes optional argument exclusions
     """
-    for row in inventory.reader:
+    for row in inventory.items:
         if row["PARTNUMBER"] not in exclusions:
             if row["ALTPARTNUMBER"] not in exclusions:
                 countsdict[row["PARTNUMBER"]] = 0
@@ -137,13 +131,13 @@ def main():
     print(len(exclusions))
     #add entries to counts dict to zero out items, by modifying the list
     #in place
-    zeroallitems(inv, countsdict, (part['PARTNUMBER'] for part in exclusions))
+    zerostockforallitems(inv, countsdict, exclusions)
     items ={}# this is a dict of alt partnumbers as a secondary lookup table
     output = []#This will eventually be a list of dicts; partnumbers are unique
     i = 0
 
     #Generate dicts for items' partnumber/altpartnumber pairings
-    for row in inv.reader: 
+    for row in inv.items: 
         items[row["PARTNUMBER"]] = row["ALTPARTNUMBER"]
     #print(row["DESCRIPTION1"])
         i+=1 #count iterations because csv.reader has no length method
