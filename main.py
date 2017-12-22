@@ -2,24 +2,31 @@
 
 import csv
 from pprint import pprint
-delimiter = "\t"
+delimiter = "\t"#assume tab-separated file, because that's my use case
 
 class Inventory():
+    """this is an abstraction of an inventory file
+    It contains a csv reader at Inventory.reader"""
     def __init__(self,file):
         self.f = open(file)
         print("Loading file",file)
         reader = csv.DictReader(self.f,delimiter=delimiter)#probably "," or "\t"
-        print("Found fields in database:")
+        print("Found headers in inventory file:")
         print(reader.fieldnames)
         self.reader=reader
+        length = 0
+        for line in self.reader:
+            length += 1
+        self.length=length
+        print("found", self.length, "items")
+    def __len__(self):
+        return self.length
     def getDialect(self):
         self.sniffer = csv.sniffer()
-
     def close():
         self.f.close()
-
     def findRecord(self, partnumber):
-        #takes a part number, returns the inventory entry for that item
+        """takes a part number, returns the inventory entry for that item"""  
         for row in self.reader:
             if row["PARTNUMBER"]==partnumber:
                 return row
@@ -39,6 +46,7 @@ def getcounts(filepath = ""):
         
     with open(filepath) as f:#open the file
         data = f.read().split("\n")#chop the string into a list of lines
+        print(data)
 
     #initialize dictionary of part numbers and counts
     countsdict ={}
@@ -61,33 +69,43 @@ def getcounts(filepath = ""):
     return countsdict
 
 def listupdateditems(inventory1, inventory2, field = ""):
-    """Compare 2 inventories, return a list of partnumbers which have been updated.
-    Optionally, this function can look at only one field for updates, eg "STOCKONHAND"
-    Returns qualifying items from item2
+    """Compare 2 inventories, return list of partnumbers with different fields
+    Optionally, this function can look at only one field for updates, eg 
+    "STOCKONHAND"
+    Returns a list of partnumbers
     """
     if len(field):
-        assert field in inventory1.reader.fieldnames#Why compare non existent fields?
+        assert field in inventory1.reader.fieldnames#validate fieldname
         assert field in inventory2.reader.fieldnames
     differentitems = []
+    similaritemcounter = 0
     for item1 in inventory1.reader:
         item2 = inventory2.findRecord(item1["PARTNUMBER"]) #find an equivalent record
         assert item2 != None
-        if len(field):
-            if item1[field] != item2[field]:
+        if len(field):#if a field to compare is specified
+            if item1[field] != item2[field]:#compare the fields for the 2 items
+                print(item1[field],item2[field])
                 differentitems +=item2
+            else:
+                similaritemcounter +=1
         else:
             for fieldname in inventory1.reader.fieldnames:
                 if item1[fieldname] != item2[fieldname]:
                     differentitems += item2
-                    break
-    print("Found,",differentitems,"different items")
-    return differentitems
+                else:
+                    similaritemcounter +=1
+    
+    # print("Found,",differentitems,"different items")
+    print("Different items",len(differentitems))
+    print("Similar items", similaritemcounter)
+    print("That's out of ",len(inventory2),"items in inventory 2")
+    return [part['PARTNUMBER'] for part in differentitems]
 
 def getexclusionsfromfile(filepath = ""):
     """This will read a list of partnumbers from file"""
     while not filepath: #ensure a filepath gets specified
         print("This script accepts a list of part numbers to not touch")
-        filepath = input("Enter the path to the file you would like to parse, or 'skip'")
+        filepath = input("Enter the path to the file to load, or 'skip'")
         if filepath == 'skip':
             return ""
         
@@ -95,8 +113,9 @@ def getexclusionsfromfile(filepath = ""):
         data = f.read().split("\n")#chop the string into a list of lines
     return data
 
-def zeroallitems(inventory, countsdict, exclusions):
-    """This works by 
+def zeroallitems(inventory, countsdict, exclusions=[]):
+    """Iterate through inventory, modify countsdict in place, setting items to 0
+    Takes optional argument exclusions
     """
     for row in inventory.reader:
         if row["PARTNUMBER"] not in exclusions:
@@ -114,18 +133,19 @@ def main():
     inv = Inventory("test-eoy2017preupdate.tsv")
     inv2 = Inventory("test-eoy2017postscan.tsv")
     countsdict = getcounts("barcodefile.txt")
-    exclusions = listupdateditems(inv,inv2)
+    exclusions = listupdateditems(inv, inv2, "STOCKONHAND")
+    print(len(exclusions))
     #add entries to counts dict to zero out items, by modifying the list
     #in place
     zeroallitems(inv, countsdict, (part['PARTNUMBER'] for part in exclusions))
     items ={}# this is a dict of alt partnumbers as a secondary lookup table
-    output = []#This will eventually be a list of dicts; primary key:partnumber
+    output = []#This will eventually be a list of dicts; partnumbers are unique
     i = 0
 
     #Generate dicts for items' partnumber/altpartnumber pairings
     for row in inv.reader: 
         items[row["PARTNUMBER"]] = row["ALTPARTNUMBER"]
-#         print(row["DESCRIPTION1"])
+    #print(row["DESCRIPTION1"])
         i+=1 #count iterations because csv.reader has no length method
     print("Found",i,"items in inventory!")
     print("Parnumber/Altpartnumber assignments loaded")
@@ -140,7 +160,7 @@ def main():
     itemsnotfound = []
     for key,value in countsdict.items():
         count = value#stock on hand        
-#         Assign the partnumber and altpartnumber fields
+    #Assign the partnumber and altpartnumber fields
         if key in items.keys():
             print("Partnumber found")
             partnumber = key
@@ -161,9 +181,9 @@ def main():
             #clear the variables
             partnumber = None
             altpartnumber = None 
-            print("Item not found for partnumber ",key)
+            # print("Item not found for partnumber ",key)
             itemsnotfound.append(key)
-            continue
+            continue #Skip adding the part data to the output
 
         row = {
             "PARTNUMBER":partnumber,
@@ -185,5 +205,7 @@ def main():
         for row in output:
             writer.writerow(row)
         print("Success")
+
 if __name__ == "__main__":
+    print("running main")
     main()
