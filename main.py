@@ -42,6 +42,7 @@ def getcounts(filepath = ""):
         
     with open(filepath) as f:#open the file
         data = f.read().split("\n")#chop the string into a list of lines
+        if data[-1] == "": del data[-1]#remove trailing newline
         print(data)
 
     #initialize dictionary of part numbers and counts
@@ -127,7 +128,7 @@ def main():
     #in place
     zerostockforallitems(inv, countsdict, exclusions)
     items ={}# this is a dict of alt partnumbers as a secondary lookup table
-    output = []#This will eventually be a list of dicts; partnumbers are unique
+    output = []#list of dicts, unique
     i = 0
 
     #Generate dicts for items' partnumber/altpartnumber pairings
@@ -147,7 +148,7 @@ def main():
     #print(items)
     itemsnotfound = []
     for key,value in countsdict.items():
-        count = value#stock on hand        
+        stockonhand = value#stock on hand        
     #Assign the partnumber and altpartnumber fields
         if key in items.keys():
             print("Partnumber found")
@@ -176,7 +177,7 @@ def main():
         row = {
             "PARTNUMBER":partnumber,
             "ALTPARTNUMBER":altpartnumber,
-            "STOCKONHAND":count
+            "STOCKONHAND":stockonhand
             }
         print(row)
         output.append(row)
