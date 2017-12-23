@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import os
 import csv
 from pprint import pprint
 delimiter = "\t"#assume tab-separated file, because that's my use case
@@ -39,12 +40,10 @@ def getcounts(filepath = ""):
     while not filepath: #ensure a filepath gets specified
         print("This will read inventory counts from a list of barcodes/SKU's.")
         filepath = input("Enter the path to the file you would like to parse.")
-        
     with open(filepath) as f:#open the file
         data = f.read()
-        data.rstrip()#remove trailing newlines
-        data.split("\n")#split the string into a list of lines
-
+        data = data.rstrip()#remove trailing newlines
+        data = data.split("\n")#split the string into a list of lines
     #initialize dictionary of part numbers and counts
     countsdict ={}
 
@@ -73,12 +72,17 @@ def listupdateditems(inventory1, inventory2, field = ""):
         assert field in inventory2.reader.fieldnames
     differentitems = []
     similaritemcounter = 0
+    i = 1#I would zero index, but then we get div/0 error
     for item1 in inventory1.items:
-        item2 = inventory2.findRecord(item1["PARTNUMBER"]) #find an equivalent record
+        i +=1#count rows processed
+        totalitems = len(inventory1.items)
+        if not i%(totalitems//100):#print a period every time 1% is completed
+            print(".", end = "")
+        item2 = inventory2.findrecord(item1["PARTNUMBER"]) #find an equivalent record
         assert item2 != None
         if len(field):#if a field to compare is specified
             if item1[field] != item2[field]:#compare the fields for the 2 items
-                print(item1[field],item2[field])
+                # print(item1[field],item2[field])
                 differentitems +=item2["PARTNUMBER"]
             else:
                 #print("similar item,", item1["PARTNUMBER"],item1["DESCRIPTION1"])
@@ -106,9 +110,9 @@ def getexclusionsfromfile(filepath = ""):
         
     with open(filepath) as f:#open the file
         data = f.read()
-        data.rstrip()#remove trailing newlines
-        data.split("\n")#split the string into a list of lines
-        
+        data = data.rstrip()#remove trailing newlines
+        data = data.split("\n")#split the string into a list of lines
+        data = list(set(data))
     return data
 
 def zerostockforallitems(inventory, countsdict, exclusions=[]):
@@ -124,11 +128,29 @@ def main():
     print("Welcome to new and improved inventory manager!")
     inv = Inventory("test-eoy2017preupdate.tsv")
     inv2 = Inventory("test-eoy2017postscan.tsv")
-    countsdict = getcounts("barcodefile.txt")
-    exclusions = listupdateditems(inv, inv2, "STOCKONHAND")
-    print(len(exclusions))
-    #add entries to counts dict to zero out items, by modifying the list
-    #in place
+    countsdict = {}
+    if "barcodefile.txt" in os.listdir():
+        countsdict += getcounts("barcodefile.txt")
+    else:
+        print("No file of updated barcodes found.")
+    exclusions = []
+    try:
+        exclusionsfromfile = getexclusionsfromfile("exclusions.txt")
+        print("exclusions file found,",len(exclusionsfromfile), "entries")
+        exclusions += exclusionsfromfile
+    except FileNotFoundError:
+        print("No exclusions file found. Continue?")
+        if ("Y") not in input().lower():
+            print("You didn't say yes or some variation. Exiting.")
+            exit()
+        else:
+            print("Continuing without exclusions file")
+
+    exclusions += listupdateditems(inv, inv2, "STOCKONHAND")#skip changed items
+    exclusions += list(countsdict.keys()) #exclude items already counted
+    exclusions = list(set(exclusions)) #strip non-unique items
+    print(len(inv.items)-len(exclusions), "items' stock will be set to 0")
+    #set counts to zero for any item in inventory that isn't exclude
     zerostockforallitems(inv, countsdict, exclusions)
     items ={}# this is a dict of alt partnumbers as a secondary lookup table
     output = []#list of dicts, unique
