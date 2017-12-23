@@ -41,9 +41,9 @@ def getcounts(filepath = ""):
         filepath = input("Enter the path to the file you would like to parse.")
         
     with open(filepath) as f:#open the file
-        data = f.read().split("\n")#chop the string into a list of lines
-        if data[-1] == "": del data[-1]#remove trailing newline
-        print(data)
+        data = f.read()
+        data.rstrip()#remove trailing newlines
+        data.split("\n")#split the string into a list of lines
 
     #initialize dictionary of part numbers and counts
     countsdict ={}
@@ -105,7 +105,10 @@ def getexclusionsfromfile(filepath = ""):
             return ""
         
     with open(filepath) as f:#open the file
-        data = f.read().split("\n")#chop the string into a list of lines
+        data = f.read()
+        data.rstrip()#remove trailing newlines
+        data.split("\n")#split the string into a list of lines
+        
     return data
 
 def zerostockforallitems(inventory, countsdict, exclusions=[]):
