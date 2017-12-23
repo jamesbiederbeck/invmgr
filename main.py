@@ -116,12 +116,6 @@ def zerostockforallitems(inventory, countsdict, exclusions=[]):
             if row["ALTPARTNUMBER"] not in exclusions:
                 countsdict[row["PARTNUMBER"]] = 0
 
-def process(row):
-    #because paladin associates two or more partnumbers with
-    #everything, we have to check each one agaisnt the update dict
-        if row[id_field] in updatedict:
-            row["STOCKONHAND"]=str(countsdict[row[id_field]] )
-
 def main():
     print("Welcome to new and improved inventory manager!")
     inv = Inventory("test-eoy2017preupdate.tsv")
