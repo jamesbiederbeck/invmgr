@@ -22,7 +22,7 @@ class Inventory():
         self.sniffer = csv.sniffer()
     def close(self):
         self.f.close()
-    def findRecord(self, partnumber):
+    def findrecord(self, partnumber):
         """takes a part number, returns the inventory entry for that item"""  
         for row in self.items:
             if row["PARTNUMBER"]==partnumber:
@@ -138,11 +138,8 @@ def main():
         i+=1 #count iterations because csv.reader has no length method
     print("Found",i,"items in inventory!")
     print("Parnumber/Altpartnumber assignments loaded")
-    #and now we reverse the key/value assignment using a list comprehension
-    #itemsbyaltpartnumber = {v: k for k, v in items}
     
     #The next block is where output actually gets generated
-    
     #Go through list of counts, and make a row consisting
     #of partnumber, altpartnumber, stockonhand
     #print(items)
@@ -150,22 +147,10 @@ def main():
     for key,value in countsdict.items():
         stockonhand = value#stock on hand        
     #Assign the partnumber and altpartnumber fields
-        if key in items.keys():
-            print("Partnumber found")
-            partnumber = key
-            altpartnumber = items[key]
-        elif key in items.values():
-            print("Item Found by ALTPARTNUMBER")
-            #look for the item among items' altpartnumbers
-            for partnumber, altpartnumber in items.items():
-                if altpartnumber == key:
-                    #found the item, so we can stop
-                    #NOTE: partnumber and altpartnumber have been assigned here
-                    #as part of the for loop, but explicit is better than explicit
-                    # so I just do the assignment anyways.
-                    partnumber = partnumber
-                    altpartnumber = altpartnumber
-                    break
+        item = inv.findrecord(key)
+        if item:
+            partnumber = item["PARTNUMBER"]
+            altpartnumber = item["ALTPARTNUMBER"]
         else:
             #clear the variables
             partnumber = None
