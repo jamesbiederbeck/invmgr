@@ -176,6 +176,7 @@ def main():
         if item:
             partnumber = item["PARTNUMBER"]
             altpartnumber = item["ALTPARTNUMBER"]
+            description1 = item["DESCRIPTION1"]
         else:
             #clear the variables
             partnumber = None
@@ -187,6 +188,7 @@ def main():
         row = {
             "PARTNUMBER":partnumber,
             "ALTPARTNUMBER":altpartnumber,
+            "DESCRIPTION1":description1,
             "STOCKONHAND":stockonhand
             }
         print(row)
@@ -198,7 +200,7 @@ def main():
     #<-------Down here, output is WRITTEN---------------->
     print("writing CSV file...")
     with open("updated-inventory",'w') as f:
-        fieldnames = ["PARTNUMBER", 'ALTPARTNUMBER','STOCKONHAND']
+        fieldnames = ["PARTNUMBER", 'ALTPARTNUMBER','DESCRIPTION1','STOCKONHAND']
         writer = csv.DictWriter(f,fieldnames=fieldnames,dialect='excel-tab')
         writer.writeheader()
         for row in output:
