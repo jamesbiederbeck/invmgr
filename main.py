@@ -25,7 +25,7 @@ class Inventory():
                 continue
             cost = float(each["UNITCOST"])
             total += stock * cost
-        return total
+        return total        
     def __len__(self):
         return len(self.items)
     def getDialect(self):
