@@ -17,6 +17,15 @@ class Inventory():
         self.items = list(self.reader)
         print("found", len(self.items), "items")
         #self.close()#still trying to decide if necessary
+    def getvalue(self):
+        total = 0 
+        for each in self.items:
+            stock = float(each["STOCKONHAND"])
+            if stock <= 0: #Don't count items that aren't in stock
+                continue
+            cost = float(each["UNITCOST"])
+            total += stock * cost
+        return total
     def __len__(self):
         return len(self.items)
     def getDialect(self):
