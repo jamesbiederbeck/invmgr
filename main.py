@@ -17,6 +17,15 @@ class Inventory():
         self.items = list(self.reader)
         print("found", len(self.items), "items")
         #self.close()#still trying to decide if necessary
+    def getvalue(self):
+        total = 0 
+        for each in self.items:
+            stock = float(each["STOCKONHAND"])
+            if stock <= 0: #Don't count items that aren't in stock
+                continue
+            cost = float(each["UNITCOST"])
+            total += stock * cost
+        return total        
     def __len__(self):
         return len(self.items)
     def getDialect(self):
@@ -74,16 +83,26 @@ def listupdateditems(inventory1, inventory2, field = ""):
     similaritemcounter = 0
     i = 1#I would zero index, but then we get div/0 error
     for item1 in inventory1.items:
+        itemfoundbyaltpartnumber = False
         i +=1#count rows processed
         totalitems = len(inventory1.items)
         if not i%(totalitems//100):#print a period every time 1% is completed
             print(".", end = "")
         item2 = inventory2.findrecord(item1["PARTNUMBER"]) #find an equivalent record
-        assert item2 != None
+        try:
+            assert item2 != None
+        except AssertionError:#sometimes partnumbers change, evidently
+            itemfoundbyaltpartnumber = True
+            print("item not found in inv2 by partnumber:", item1)
+            item2 = inventory2.findrecord(item1["ALTPARTNUMBER"])
+            print("item found by altpartnumber,",item1["ALTPARTNUMBER"])
         if len(field):#if a field to compare is specified
             if item1[field] != item2[field]:#compare the fields for the 2 items
                 # print(item1[field],item2[field])
-                differentitems +=item2["PARTNUMBER"]
+                if itemfoundbyaltpartnumber:
+                    differentitems.append(item2["ALTPARTNUMBER"])
+                else:
+                    differentitems.append(item2["PARTNUMBER"])
             else:
                 #print("similar item,", item1["PARTNUMBER"],item1["DESCRIPTION1"])
                 similaritemcounter +=1
@@ -127,14 +146,14 @@ def zerostockforallitems(inventory, countsdict, exclusions=[]):
 def main():
     print("Welcome to new and improved inventory manager!")
     inv = Inventory("test-eoy2017preupdate.tsv")
-    inv2 = Inventory("test-eoy2017postscan.tsv")
+    inv2 = Inventory("real inventory.tsv")
     countsdict = {}
     if "barcodefile.txt" in os.listdir():
         countsdict += getcounts("barcodefile.txt")
     else:
         print("No file of updated barcodes found.")
     exclusions = []
-    try:
+    try: #This "try" block loads a list of partnumbers to ignore, from file
         exclusionsfromfile = getexclusionsfromfile("exclusions.txt")
         print("exclusions file found,",len(exclusionsfromfile), "entries")
         exclusions += exclusionsfromfile
@@ -145,7 +164,6 @@ def main():
             exit()
         else:
             print("Continuing without exclusions file")
-
     exclusions += listupdateditems(inv, inv2, "STOCKONHAND")#skip changed items
     exclusions += list(countsdict.keys()) #exclude items already counted
     exclusions = list(set(exclusions)) #strip non-unique items
@@ -173,10 +191,10 @@ def main():
         stockonhand = value#stock on hand        
     #Assign the partnumber and altpartnumber fields
         item = inv.findrecord(key)
-        if item:
+        if item:#check if the item was found
             partnumber = item["PARTNUMBER"]
             altpartnumber = item["ALTPARTNUMBER"]
-            description1 = item["DESCRIPTION1"]
+            #description1 = item["DESCRIPTION1"]
         else:
             #clear the variables
             partnumber = None
@@ -188,19 +206,17 @@ def main():
         row = {
             "PARTNUMBER":partnumber,
             "ALTPARTNUMBER":altpartnumber,
-            "DESCRIPTION1":description1,
+            #"DESCRIPTION1":description1,
             "STOCKONHAND":stockonhand
             }
-        print(row)
         output.append(row)
     print()# vertical space
-    print("Here's the output")
-    pprint(output)
+
     
     #<-------Down here, output is WRITTEN---------------->
     print("writing CSV file...")
-    with open("updated-inventory",'w') as f:
-        fieldnames = ["PARTNUMBER", 'ALTPARTNUMBER','DESCRIPTION1','STOCKONHAND']
+    with open("2017eoyupdate.tsv",'w') as f:
+        fieldnames = ["PARTNUMBER", 'ALTPARTNUMBER','STOCKONHAND']
         writer = csv.DictWriter(f,fieldnames=fieldnames,dialect='excel-tab')
         writer.writeheader()
         for row in output:
