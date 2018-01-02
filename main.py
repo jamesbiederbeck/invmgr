@@ -3,15 +3,15 @@
 import os
 import csv
 from pprint import pprint
-delimiter = "\t"#assume tab-separated file, because that's my use case
+DELIMITER = "\t"#assume tab-separated file, because that's my use case
 
 class Inventory():
     """this is an abstraction of an inventory file
     It contains a csv reader at Inventory.reader"""
-    def __init__(self,file):
+    def __init__(self, file):
         self.f = open(file)
-        print("Loading file",file)
-        self.reader = csv.DictReader(self.f,delimiter=delimiter)#probably "," or "\t"
+        print("Loading file", file)
+        self.reader = csv.DictReader(self.f, delimiter=DELIMITER)
         print("Found headers in inventory file:")
         print(self.reader.fieldnames)
         self.items = list(self.reader)
@@ -29,18 +29,19 @@ class Inventory():
     def __len__(self):
         return len(self.items)
     def getDialect(self):
-        self.sniffer = csv.sniffer()
+        sniffer = csv.Sniffer()
+        sniffer.sniff(self)
     def close(self):
         self.f.close()
     def findrecord(self, partnumber):
         """takes a part number, returns the inventory entry for that item"""  
         for row in self.items:
-            if row["PARTNUMBER"]==partnumber:
+            if row["PARTNUMBER"] == partnumber:
                 return row
-            if row["ALTPARTNUMBER"]==partnumber:
+            if row["ALTPARTNUMBER"] == partnumber:
                 return row
         #assume that if execution reached this point, nothing was found.
-        print("Could not find record,",partnumber)
+        print("Could not find record,", partnumber)
         return None
 
 def getcounts(filepath = ""):
