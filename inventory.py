@@ -36,3 +36,13 @@ class Inventory():
         #assume that if execution reached this point, nothing was found.
         print("Could not find record,", partnumber)
         return None
+    def updateitemfield(self,partnumbers,field,value,output=[]):
+        """Accepts a partnumber, altpartnumber, or list thereof, and updates
+        sets the field passed to the value passed. Appends to output in place,
+        and also returns output.
+        """
+        pass
+        # if type(partnumbers) == list:
+        #     for item in inv.items:
+
+        # elif type(partnumbers) == str:
