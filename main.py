@@ -4,7 +4,7 @@ import os
 import csv
 from inventory import Inventory
 from pprint import pprint
-DELIMITER = "\t"#assume tab-separated file, because that's my use case
+
 
 def getcounts(filepath = ""):
     """This will read a list of barcodes, and flatten to a list of

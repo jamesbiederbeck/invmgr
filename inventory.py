@@ -1,7 +1,10 @@
+import csv
+DELIMITER = "\t"#assume tab-separated file, because that's my use case
+
 class Inventory():
     """this is an abstraction of an inventory file
     It contains a csv reader at Inventory.reader"""
-    def __init__(self, file):
+    def __init__(self, file,):
         self.f = open(file)
         print("Loading file", file)
         self.reader = csv.DictReader(self.f, delimiter=DELIMITER)
