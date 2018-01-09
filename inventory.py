@@ -49,3 +49,50 @@ class Inventory():
         #     for item in inv.items:
 
         # elif type(partnumbers) == str:
+def listupdateditems(inventory1, inventory2, field = ""):
+    """Compare 2 inventories, return list of partnumbers with different fields
+    Optionally, this function can look at only one field for updates, eg 
+    "STOCKONHAND"
+    Returns a list of partnumbers
+    """
+    if len(field):
+        assert field in inventory1.reader.fieldnames#validate fieldname
+        assert field in inventory2.reader.fieldnames
+    differentitems = []
+    similaritemcounter = 0
+    i = 1#I would zero index, but then we get div/0 error
+    for item1 in inventory1.items:
+        itemfoundbyaltpartnumber = False
+        i +=1#count rows processed
+        totalitems = len(inventory1.items)
+        if not i%(totalitems//100):#print a period every time 1% is completed
+            print(".", end = "")
+        item2 = inventory2.findrecord(item1["PARTNUMBER"]) #find an equivalent record
+        try:
+            assert item2 != None
+        except AssertionError:#sometimes partnumbers change, evidently
+            itemfoundbyaltpartnumber = True
+            print("item not found in inv2 by partnumber:", item1)
+            item2 = inventory2.findrecord(item1["ALTPARTNUMBER"])
+            print("item found by altpartnumber,",item1["ALTPARTNUMBER"])
+        if len(field):#if a field to compare is specified
+            if item1[field] != item2[field]:#compare the fields for the 2 items
+                # print(item1[field],item2[field])
+                if itemfoundbyaltpartnumber:
+                    differentitems.append(item2["ALTPARTNUMBER"])
+                else:
+                    differentitems.append(item2["PARTNUMBER"])
+            else:
+                #print("similar item,", item1["PARTNUMBER"],item1["DESCRIPTION1"])
+                similaritemcounter +=1
+        else:
+            for fieldname in inventory1.reader.fieldnames:
+                if item1[fieldname] != item2[fieldname]:
+                    differentitems += item2
+                else:
+                    similaritemcounter +=1
+    # print("Found,",differentitems,"different items")
+    print("Different items",len(differentitems))
+    print("Similar items", similaritemcounter)
+    print("That's out of ",len(inventory2.items),"items in inventory 2")
+    return differentitems
