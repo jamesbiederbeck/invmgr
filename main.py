@@ -18,19 +18,16 @@ def getcounts(filepath = ""):
         data = data.split("\n")#split the string into a list of lines
     #initialize dictionary of part numbers and counts
     countsdict ={}
-
     #This goes through the list of part numbers, and makes sure each has an
     #entry in the dictionary.
     for line in set(data):
         countsdict[line] = 0 
-
     #Increment count for each instance of the sku in the list of part numbers
     #found
     for line in data:
         #countsdict[line.split("\t")[0]] +=1
         countsdict[line]+=1
     print("Found",len(countsdict),"items in the barcode list!")
-
     return countsdict
 
 def listupdateditems(inventory1, inventory2, field = ""):

@@ -16,8 +16,6 @@ def writeupdate(csvrows):
             writer.writerow(row)
         print("Success")
 
-
-
 def main():
     inv = inventory("inventory.tsv")
     expireditems = []
