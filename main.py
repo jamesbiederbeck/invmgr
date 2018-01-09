@@ -1,150 +1,188 @@
-
 # coding: utf-8
 
-# In[8]:
-
+import os
 import csv
+from inventory import Inventory
 from pprint import pprint
-delimiter = "\t"
 
-class Inventory():
-    def __init__(self,file):
-        self.f = open(file)
-        print("Loading file",file)
-        reader = csv.DictReader(self.f,delimiter=delimiter)#probably "," or "\t"
-        print("Found fields in database:")
-        print(reader.fieldnames)
-        self.reader=reader
-    def getDialect(self):
-        self.sniffer = csv.sniffer()
 
-    def close():
-        self.f.close()
-
-    def findRecord(self, partnumber):
-        #takes a part number, returns the inventory entry for that item
-        for row in self.reader:
-            if row["PARTNUMBER"]==partnumber:
-                return row
-            if row["ALTPARTNUMBER"]==partnumber:
-                return row
-        #assume that if execution reached this point, nothing was found.
-        #print("Could not find record,",partnumber)
-        print("none found")
-        return None
-
-def getCounts(filepath = ""):
+def getcounts(filepath = ""):
     """This will read a list of barcodes, and flatten to a list of
         all the barcodes and how many times each one is in the list."""
     while not filepath: #ensure a filepath gets specified
         print("This will read inventory counts from a list of barcodes/SKU's.")
         filepath = input("Enter the path to the file you would like to parse.")
-        
     with open(filepath) as f:#open the file
-        data = f.read().split("\n")#chop the string into a list of lines
-
+        data = f.read()
+        data = data.rstrip()#remove trailing newlines
+        data = data.split("\n")#split the string into a list of lines
     #initialize dictionary of part numbers and counts
     countsdict ={}
-
     #This goes through the list of part numbers, and makes sure each has an
-    #entry in the dictionary. Inefficient, but not wasteful enough to matter
-    #at this scale.
-    for line in data:
-        #here I get only the first column, since I added timestamps to counts list
-        #countsdict[line.split("\t")[0]] = 0 
+    #entry in the dictionary.
+    for line in set(data):
         countsdict[line] = 0 
-
     #Increment count for each instance of the sku in the list of part numbers
     #found
     for line in data:
         #countsdict[line.split("\t")[0]] +=1
         countsdict[line]+=1
     print("Found",len(countsdict),"items in the barcode list!")
-
     return countsdict
 
-def process(row):
-    #because paladin associates two or more partnumbers with
-    #everything, we have to check each one agaisnt the update dict
-        if row[id_field] in updatedict:
-            row["STOCKONHAND"]=str(countsdict[row[id_field]] )
+def listupdateditems(inventory1, inventory2, field = ""):
+    """Compare 2 inventories, return list of partnumbers with different fields
+    Optionally, this function can look at only one field for updates, eg 
+    "STOCKONHAND"
+    Returns a list of partnumbers
+    """
+    if len(field):
+        assert field in inventory1.reader.fieldnames#validate fieldname
+        assert field in inventory2.reader.fieldnames
+    differentitems = []
+    similaritemcounter = 0
+    i = 1#I would zero index, but then we get div/0 error
+    for item1 in inventory1.items:
+        itemfoundbyaltpartnumber = False
+        i +=1#count rows processed
+        totalitems = len(inventory1.items)
+        if not i%(totalitems//100):#print a period every time 1% is completed
+            print(".", end = "")
+        item2 = inventory2.findrecord(item1["PARTNUMBER"]) #find an equivalent record
+        try:
+            assert item2 != None
+        except AssertionError:#sometimes partnumbers change, evidently
+            itemfoundbyaltpartnumber = True
+            print("item not found in inv2 by partnumber:", item1)
+            item2 = inventory2.findrecord(item1["ALTPARTNUMBER"])
+            print("item found by altpartnumber,",item1["ALTPARTNUMBER"])
+        if len(field):#if a field to compare is specified
+            if item1[field] != item2[field]:#compare the fields for the 2 items
+                # print(item1[field],item2[field])
+                if itemfoundbyaltpartnumber:
+                    differentitems.append(item2["ALTPARTNUMBER"])
+                else:
+                    differentitems.append(item2["PARTNUMBER"])
+            else:
+                #print("similar item,", item1["PARTNUMBER"],item1["DESCRIPTION1"])
+                similaritemcounter +=1
+        else:
+            for fieldname in inventory1.reader.fieldnames:
+                if item1[fieldname] != item2[fieldname]:
+                    differentitems += item2
+                else:
+                    similaritemcounter +=1
+    
+    # print("Found,",differentitems,"different items")
+    print("Different items",len(differentitems))
+    print("Similar items", similaritemcounter)
+    print("That's out of ",len(inventory2.items),"items in inventory 2")
+    return differentitems
 
+def getexclusionsfromfile(filepath = ""):
+    """This will read a list of partnumbers from file"""
+    while not filepath: #ensure a filepath gets specified
+        print("This script accepts a list of part numbers to not touch")
+        filepath = input("Enter the path to the file to load, or 'skip'")
+        if filepath == 'skip':
+            return ""
+        
+    with open(filepath) as f:#open the file
+        data = f.read()
+        data = data.rstrip()#remove trailing newlines
+        data = data.split("\n")#split the string into a list of lines
+        data = list(set(data))
+    return data
 
-# In[9]:
+def zerostockforallitems(inventory, countsdict, exclusions=[]):
+    """Iterate through inventory, fill countsdict, setting items to 0
+    Takes optional argument exclusions
+    """
+    for row in inventory.items:
+        if row["PARTNUMBER"] not in exclusions:
+            if row["ALTPARTNUMBER"] not in exclusions:
+                countsdict[row["PARTNUMBER"]] = 0
 
 def main():
-    inv = Inventory("inventory04-19-17")
-    countsdict = getCounts("barcodefile.txt")
+    print("Welcome to new and improved inventory manager!")
+    inv = Inventory("test-eoy2017preupdate.tsv")
+    inv2 = Inventory("real inventory.tsv")
+    countsdict = {}
+    if "barcodefile.txt" in os.listdir():
+        countsdict += getcounts("barcodefile.txt")
+    else:
+        print("No file of updated barcodes found.")
+    exclusions = []
+    try: #This "try" block loads a list of partnumbers to ignore, from file
+        exclusionsfromfile = getexclusionsfromfile("exclusions.txt")
+        print("exclusions file found,",len(exclusionsfromfile), "entries")
+        exclusions += exclusionsfromfile
+    except FileNotFoundError:
+        print("No exclusions file found. Continue?")
+        if ("Y") not in input().lower():
+            print("You didn't say yes or some variation. Exiting.")
+            exit()
+        else:
+            print("Continuing without exclusions file")
+    exclusions += listupdateditems(inv, inv2, "STOCKONHAND")#skip changed items
+    exclusions += list(countsdict.keys()) #exclude items already counted
+    exclusions = list(set(exclusions)) #strip non-unique items
+    print(len(inv.items)-len(exclusions), "items' stock will be set to 0")
+    #set counts to zero for any item in inventory that isn't exclude
+    zerostockforallitems(inv, countsdict, exclusions)
     items ={}# this is a dict of alt partnumbers as a secondary lookup table
-    output = []#This will eventually be a list of dicts; primary key:partnumber
+    output = []#list of dicts, unique
     i = 0
 
     #Generate dicts for items' partnumber/altpartnumber pairings
-    for row in inv.reader: 
+    for row in inv.items: 
         items[row["PARTNUMBER"]] = row["ALTPARTNUMBER"]
-#         print(row["DESCRIPTION1"])
+    #print(row["DESCRIPTION1"])
         i+=1 #count iterations because csv.reader has no length method
     print("Found",i,"items in inventory!")
     print("Parnumber/Altpartnumber assignments loaded")
-    #and now we reverse the key/value assignment using a list comprehension
-    #itemsbyaltpartnumber = {v: k for k, v in items}
     
     #The next block is where output actually gets generated
-    
     #Go through list of counts, and make a row consisting
     #of partnumber, altpartnumber, stockonhand
     #print(items)
     itemsnotfound = []
     for key,value in countsdict.items():
-        
-#         Assign the partnumber and altpartnumber fields
-        if key in items.keys():
-            print("Partnumber found")
-            partnumber = key
-            altpartnumber = items[key]
-        elif key in items.values():
-            print("Item Found by ALTPARTNUMBER")
-            #look for the item among items' altpartnumbers
-            for partnumber, altpartnumber in items.items():
-                if altpartnumber == key:
-                    #found the item, so we can stop
-                    #NOTE: partnumber and altpartnumber have been assigned here
-                    #as part of the for loop, but explicit is better than explicit
-                    # so I just do the assignment anyways.
-                    partnumber = partnumber
-                    altpartnumber = altpartnumber
-                    break
+        stockonhand = value#stock on hand        
+    #Assign the partnumber and altpartnumber fields
+        item = inv.findrecord(key)
+        if item:#check if the item was found
+            partnumber = item["PARTNUMBER"]
+            altpartnumber = item["ALTPARTNUMBER"]
+            #description1 = item["DESCRIPTION1"]
         else:
             #clear the variables
             partnumber = None
             altpartnumber = None 
-            print("Item not found for partnumber ",key)
+            # print("Item not found for partnumber ",key)
             itemsnotfound.append(key)
-            continue
-
-        count = value#Got assigned at the top of this for loop
+            continue #Skip adding the part data to the output
 
         row = {
             "PARTNUMBER":partnumber,
             "ALTPARTNUMBER":altpartnumber,
-            "STOCKONHAND":count
+            #"DESCRIPTION1":description1,
+            "STOCKONHAND":stockonhand
             }
-        print(row)
         output.append(row)
     print()# vertical space
-    print("Here's the output")
-    pprint(output)
 
+    
+    #<-------Down here, output is WRITTEN---------------->
     print("writing CSV file...")
-    with open("updated-inventory",'w') as f:
+    with open("2017eoyupdate.tsv",'w') as f:
         fieldnames = ["PARTNUMBER", 'ALTPARTNUMBER','STOCKONHAND']
         writer = csv.DictWriter(f,fieldnames=fieldnames,dialect='excel-tab')
         writer.writeheader()
         for row in output:
             writer.writerow(row)
         print("Success")
-        print("Items not found:")
-if __name__ == "__main__":
-    main()
-    
 
+if __name__ == "__main__":
+    print("running main")
+    main()
