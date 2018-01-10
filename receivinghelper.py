@@ -1,7 +1,8 @@
-from inventory import Inventory
 import csv
 import os
 from pprint import pprint
+from inventory import Inventory
+from counthelper import getcountsfromfile
 
 
 def writeupdate(csvrows):
@@ -9,8 +10,8 @@ def writeupdate(csvrows):
     """    
     #<-------Down here, output is WRITTEN---------------->
     print("writing CSV file...")
-
-    with open("receiveditems.tsv",'w') as f:
+    filename = "receiveditems.tsv"
+    with open(filename,'w') as f:
         print("saving updated inventory to",os.getcwd())
         fieldnames = [
             "PARTNUMBER", "ALTPARTNUMBER","DESCRIPTION1","STOCKONHAND"
@@ -19,38 +20,43 @@ def writeupdate(csvrows):
         writer.writeheader()
         for row in csvrows:
             writer.writerow(row)
-        print("Success")
+        print("Wrote file of received items at ", os.getcwd()+"\\"+filename)
+        print("you can ")
+
 
 def main(verbose=False):
     inv = Inventory("inventory.tsv")
-    receiveditems = []
+    output = []
     itemsnotfound = []
-    with open("receivedscan.txt") as f:
-        scannedbarcodes = f.readlines()
+    receivedcountsdict = getcountsfromfile("testscan.txt")
     print()
     print("It looks like you scanned these items:")
-    for each in scannedbarcodes:
-        each = each.rstrip()#get rid of newlines
+    for each in receivedcountsdict.keys():
         item = inv.findrecord(each)
         if not item:#Item wasn't found
             itemsnotfound.append(each)
             continue#skip adding the item to the list
+
+        receivedquantity = receivedcountsdict[each]
         row = {}
         row["PARTNUMBER"] = item["PARTNUMBER"]
         row["ALTPARTNUMBER"] = item["ALTPARTNUMBER"]
         row["DESCRIPTION1"] = item["DESCRIPTION1"]
-        row["STOCKONHAND"] = str(float(item["STOCKONHAND"])+1)
+        row["STOCKONHAND"] = str(float(item["STOCKONHAND"])+receivedquantity)
         print("    ",end='')
         print(row["DESCRIPTION1"],"x",row["STOCKONHAND"])
-        receiveditems.append(row)
+        output.append(row)
     print("I couldn't find these items:")
-    pprint(itemsnotfound)
+    for each in itemsnotfound:
+        print(each,"x",receivedcountsdict[each])
     print(
         "I don't expect you to know what those numbers mean, so google them "+
         "if you would like to know what items those are. "
     )
-    input("Press Control-C to  cancel, or enter to continue")
-    writeupdate(receiveditems)
+    #foo = input("Press Control-C to  cancel, or enter to continue")
+    writeupdate(output)
+    print("update written")
+
 
 
 

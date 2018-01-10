@@ -1,4 +1,4 @@
-def getcounts(filepath = ""):
+def getcountsfromfile(filepath=""):
     """This will read a list of barcodes, and flatten to a list of
         all the barcodes and how many times each one is in the list."""
     while not filepath: #ensure a filepath gets specified
@@ -9,7 +9,7 @@ def getcounts(filepath = ""):
         data = data.rstrip()#remove trailing newlines
         data = data.split("\n")#split the string into a list of lines
     #initialize dictionary of part numbers and counts
-    countsdict ={}
+    countsdict = {}#{partnumber:int}
     #This goes through the list of part numbers, and makes sure each has an
     #entry in the dictionary.
     for line in set(data):

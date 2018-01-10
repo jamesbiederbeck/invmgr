@@ -3,7 +3,7 @@
 import os
 import csv
 from inventory import Inventory, listupdateditems
-from counthelper import getcounts
+from counthelper import getcountsfromfile
 from pprint import pprint
 
 
@@ -31,6 +31,7 @@ def zerostockforallitems(inventory, countsdict, exclusions=[]):
         if row["PARTNUMBER"] not in exclusions:
             if row["ALTPARTNUMBER"] not in exclusions:
                 countsdict[row["PARTNUMBER"]] = 0
+    return countsdict# just to be explicit
 
 def main():
     print("Welcome to new and improved inventory manager!")
@@ -38,7 +39,7 @@ def main():
     inv2 = Inventory("real inventory.tsv")
     countsdict = {}
     if "barcodefile.txt" in os.listdir():
-        countsdict += getcounts("barcodefile.txt")
+        countsdict += getcountsfromfile("barcodefile.txt")
     else:
         print("No file of updated barcodes found.")
     exclusions = []
