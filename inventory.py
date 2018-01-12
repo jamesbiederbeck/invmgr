@@ -39,6 +39,17 @@ class Inventory():
         #assume that if execution reached this point, nothing was found.
         print("Could not find record,", partnumber)
         return None
+    def findrecordbymfgpartnumber(self,partnumber):
+        def findrecord(self, partnumber):
+        """takes a part number, returns the inventory entry for that item"""  
+        for row in self.items:
+            if row["PARTNUMBER"] == partnumber:
+                return row
+            if row["ALTPARTNUMBER"] == partnumber:
+                return row
+        #assume that if execution reached this point, nothing was found.
+        print("Could not find record,", partnumber)
+        return None
     def updateitemfield(self,partnumbers,field,value,output=[]):
         """Accepts a partnumber, altpartnumber, or list thereof, and updates
         sets the field passed to the value passed. Appends to output in place,
