@@ -28,7 +28,7 @@ def main(verbose=False):
     inv = Inventory("inventory.tsv")
     output = []
     itemsnotfound = []
-    receivedcountsdict = getcountsfromfile("testscan.txt")
+    receivedcountsdict = getcountsfromfile()
     print()
     print("It looks like you scanned these items:")
     for each in receivedcountsdict.keys():
@@ -38,11 +38,14 @@ def main(verbose=False):
             continue#skip adding the item to the list
 
         receivedquantity = receivedcountsdict[each]
+        stockonhand = float(item["STOCKONHAND"])
+        if stockonhand < 0:
+            stockonhand = 0
         row = {}
         row["PARTNUMBER"] = item["PARTNUMBER"]
         row["ALTPARTNUMBER"] = item["ALTPARTNUMBER"]
         row["DESCRIPTION1"] = item["DESCRIPTION1"]
-        row["STOCKONHAND"] = str(float(item["STOCKONHAND"])+receivedquantity)
+        row["STOCKONHAND"] = str(stockonhand+receivedquantity)
         print("    ",end='')
         print(row["DESCRIPTION1"],"x",row["STOCKONHAND"])
         output.append(row)
