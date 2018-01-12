@@ -21,7 +21,7 @@ def writeupdate(csvrows):
         for row in csvrows:
             writer.writerow(row)
         print("Wrote file of received items at ", os.getcwd()+"\\"+filename)
-        print("you can ")
+        print("you can now import that to your POS.")
 
 
 def main(verbose=False):
