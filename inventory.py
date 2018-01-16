@@ -40,7 +40,8 @@ class Inventory():
         print("Could not find record,", partnumber)
         return None
     def findrecordbymfgpartnumber(self,partnumber):
-        def findrecord(self, partnumber):
+        pass
+    def findrecord(self, partnumber):
         """takes a part number, returns the inventory entry for that item"""  
         for row in self.items:
             if row["PARTNUMBER"] == partnumber:
