@@ -4,7 +4,6 @@ from pprint import pprint
 from inventory import Inventory
 from counthelper import getcountsfromfile
 
-
 def writeupdate(csvrows):
     """Accepts a list of items,  writes a tsv file.
     """    
@@ -23,14 +22,7 @@ def writeupdate(csvrows):
         print("Wrote file of received items at ", os.getcwd()+"\\"+filename)
         print("you can now import that to your POS.")
 
-
-def main(verbose=False):
-    inv = Inventory("inventory.tsv")
-    output = []
-    itemsnotfound = []
-    receivedcountsdict = getcountsfromfile()
-    print()
-    print("It looks like you scanned these items:")
+def receive(receivedcountsdict, inv, itemsnotfound, fixnegative, output):
     for each in receivedcountsdict.keys():
         item = inv.findrecord(each)
         if not item:#Item wasn't found
@@ -45,10 +37,22 @@ def main(verbose=False):
         row["PARTNUMBER"] = item["PARTNUMBER"]
         row["ALTPARTNUMBER"] = item["ALTPARTNUMBER"]
         row["DESCRIPTION1"] = item["DESCRIPTION1"]
-        row["STOCKONHAND"] = str(stockonhand+receivedquantity)
+        if not fixnegative:
+            row["STOCKONHAND"] = str(stockonhand+receivedquantity)
+        elif fixnegative:
+            row["STOCKONHAND"] = str(0+receivedquantity)
         print("    ",end='')
         print(row["DESCRIPTION1"],"x",row["STOCKONHAND"])
         output.append(row)
+
+def main(verbose=False,fixnegative=False):
+    inv = Inventory("inventory.tsv")
+    output = []
+    itemsnotfound = []
+    receivedcountsdict = getcountsfromfile()
+    print()
+    print("It looks like you scanned these items:")
+    receive(receivedcountsdict, inv, itemsnotfound, fixnegative, output)
     print("I couldn't find these items:")
     for each in itemsnotfound:
         print(each,"x",receivedcountsdict[each])
@@ -60,11 +64,8 @@ def main(verbose=False):
     writeupdate(output)
     print("update written")
 
-
-
-
 if __name__ == "__main__":
     main()
 else:
-    print(__name__)
+    print("name:",__name__)
     
