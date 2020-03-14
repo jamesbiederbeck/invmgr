@@ -29,6 +29,7 @@ def main(verbose=False):
         scannedbarcodes = f.readlines()
     print()
     print("It looks like you scanned these items:")
+    #iterate through list of scanned barcodes, and increment the stock count for each time a corresponding barcode is scanned
     for each in scannedbarcodes:
         each = each.rstrip()#get rid of newlines
         item = inv.findrecord(each)
@@ -39,7 +40,8 @@ def main(verbose=False):
         row["PARTNUMBER"] = item["PARTNUMBER"]
         row["ALTPARTNUMBER"] = item["ALTPARTNUMBER"]
         row["DESCRIPTION1"] = item["DESCRIPTION1"]
-        row["STOCKONHAND"] = str(float(item["STOCKONHAND"])+1)
+        #take existing count, and increment it
+        row["STOCKONHAND"] = str(float(item["STOCKONHAND"])+1) 
         print("    ",end='')
         print(row["DESCRIPTION1"],"x",row["STOCKONHAND"])
         receiveditems.append(row)
